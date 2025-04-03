@@ -2,12 +2,12 @@
 <project version="4">
   <component name="deploymentTargetSelector">
     <selectionStates>
-      <SelectionState runConfigName="app">
+      <SelectionState runConfigName="IndoorNavDisha.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-03-02T09:54:56.643153600Z">
+        <DropdownSelection timestamp="2025-03-09T10:26:55.889491500Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=RZCX12K2EHA" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=9633943955000CG" />
             </handle>
           </Target>
         </DropdownSelection>

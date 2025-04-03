@@ -32,7 +32,6 @@ class ARCoreRenderer(
         try {
             // Get the latest frame from ARCore
             val frame = session.update()
-
             // Draw the camera background
             frame.acquireCameraImage().close() // Just to access the camera, not actually using the image
         } catch (e: Exception) {
