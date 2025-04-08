@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="IndoorNavDisha.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-03-09T10:26:55.889491500Z">
+        <DropdownSelection timestamp="2025-04-08T13:31:37.623857600Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=9633943955000CG" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=C:\Users\kunal\.android\avd\Pixel_8a.avd" />
             </handle>
           </Target>
         </DropdownSelection>
