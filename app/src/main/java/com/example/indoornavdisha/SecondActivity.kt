@@ -33,9 +33,9 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.concurrent.TimeUnit
-import com.example.indoornavdisha.WaypointStorage
 
 // Data model for a waypoint response
+// Each waypoint has an ID and x, y, z coordinates
 data class Waypoint(
     val waypoint_id: Int,
     val x: Float,
@@ -45,30 +45,30 @@ data class Waypoint(
 
 // Data model for the API response
 data class WaypointsResponse(
-    val message: String,
-    val waypoints: List<Waypoint>
+    val message: String, // Status message from server
+    val waypoints: List<Waypoint> // List of waypoints received from the server
 )
 
 // Retrofit interface for API communication
 interface ApiService {
     @Multipart
-    @POST("upload")
+    @POST("upload") // Define the API endpoint for image upload
     suspend fun uploadImage(
-        @Part image: MultipartBody.Part
-    ): Response<WaypointsResponse>
+        @Part image: MultipartBody.Part // Image file to be uploaded
+    ): Response<WaypointsResponse> // API response containing waypoints
 
     companion object {
         fun create(): ApiService {
             val client = OkHttpClient.Builder()
-                .connectTimeout(500, TimeUnit.SECONDS)
+                .connectTimeout(500, TimeUnit.SECONDS) // Timeout settings
                 .readTimeout(120, TimeUnit.SECONDS)
                 .writeTimeout(120, TimeUnit.SECONDS)
                 .build()
 
             return Retrofit.Builder()
-                .baseUrl("http://192.168.62.191:5000/")
+                .baseUrl("http://192.168.0.105:5000/") // Use this for Android emulator (localhost equivalent)
                 .client(client)
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create()) // Convert JSON response to data classes
                 .build()
                 .create(ApiService::class.java)
         }
@@ -77,26 +77,26 @@ interface ApiService {
 
 class SecondActivity : AppCompatActivity() {
 
-    private val TAG = "SecondActivity"
+    private val TAG = "SecondActivity" // Log tag for debugging
 
-    private lateinit var uploadButton: Button
-    private lateinit var imagePreview: ImageView
-    private lateinit var resultText: TextView
+    private lateinit var uploadButton: Button // Button to upload image
+    private lateinit var imagePreview: ImageView // ImageView to show selected image
+    private lateinit var resultText: TextView // TextView to display server response
 
-    private var selectedImageUri: Uri? = null
+    private var selectedImageUri: Uri? = null // Stores the selected image's URI
 
-    private val apiService by lazy { ApiService.create() }
+    private val apiService by lazy { ApiService.create() } // Create API service instance
 
     // Register activity result for selecting an image
     private val getImageContent =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 result.data?.data?.let { uri ->
-                    selectedImageUri = uri
-                    imagePreview.setImageURI(uri)
+                    selectedImageUri = uri // Store selected image URI
+                    imagePreview.setImageURI(uri) // Display image preview
                     Toast.makeText(this, "Image selected. Ready to upload.", Toast.LENGTH_SHORT).show()
                     uploadButton.text = "Upload Selected Image"
-                    uploadButton.setOnClickListener { uploadSelectedImage() }
+                    uploadButton.setOnClickListener { uploadSelectedImage() } // Enable upload after selection
                 }
             }
         }
@@ -113,20 +113,21 @@ class SecondActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.image_view)
+        setContentView(R.layout.image_view) // Set UI layout
 
+        // Initialize UI elements
         uploadButton = findViewById(R.id.uploadButton)
         imagePreview = findViewById(R.id.imagePreview)
         resultText = findViewById(R.id.resultText)
 
-        uploadButton.setOnClickListener { checkPermissionAndPickImage() }
+        uploadButton.setOnClickListener { checkPermissionAndPickImage() } // Request permission & select image
     }
 
     private fun checkPermissionAndPickImage() {
         val permission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
+            Manifest.permission.READ_MEDIA_IMAGES // For Android 13+
         } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE // For Android 12 and below
         }
 
         if (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
@@ -164,6 +165,7 @@ class SecondActivity : AppCompatActivity() {
         return result ?: "image_upload.jpg"
     }
 
+
     private fun uploadSelectedImage() {
         val imageUri = selectedImageUri
         if (imageUri == null) {
@@ -171,7 +173,7 @@ class SecondActivity : AppCompatActivity() {
             return
         }
 
-        uploadButton.isEnabled = false
+        uploadButton.isEnabled = false // Disable button during upload
         uploadButton.text = "Uploading..."
         resultText.text = "Processing image..."
 
@@ -180,13 +182,17 @@ class SecondActivity : AppCompatActivity() {
                 val file = withContext(Dispatchers.IO) {
                     val parcelFileDescriptor = contentResolver.openFileDescriptor(imageUri, "r")
                     val inputStream = FileInputStream(parcelFileDescriptor?.fileDescriptor)
+
+                    // Get the original file name
                     val originalFileName = getFileName(imageUri)
-                    val tempFile = File(cacheDir, originalFileName)
+                    val tempFile = File(cacheDir, originalFileName) // Use original file name (with extension)
+
                     val outputStream = FileOutputStream(tempFile)
                     inputStream.copyTo(outputStream)
                     outputStream.close()
                     tempFile
                 }
+
 
                 val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("image", file.name, requestFile)
@@ -194,27 +200,14 @@ class SecondActivity : AppCompatActivity() {
                 val response = apiService.uploadImage(body)
                 if (response.isSuccessful) {
                     val waypointsResponse = response.body()
+                    val formattedWaypoints = waypointsResponse?.waypoints?.joinToString("\n") { waypoint ->
+                        "Waypoint ${waypoint.waypoint_id}: (${waypoint.x}, ${waypoint.y}, ${waypoint.z})"
+                    } ?: "No waypoints returned."
 
-                    // Store waypoints in the global object
-                    if (waypointsResponse != null) {
-                        WaypointStorage.waypoints = waypointsResponse.waypoints
-                    }
-
-                    // Optionally format and display waypoints here
-                    val formattedWaypoints = if (WaypointStorage.waypoints.isNotEmpty()) {
-                        WaypointStorage.waypoints.joinToString("\n") { waypoint ->
-                            "Waypoint ${waypoint.waypoint_id}: (${waypoint.x}, ${waypoint.y}, ${waypoint.z})"
-                        }
-                    } else {
-                        "No waypoints returned."
-                    }
                     resultText.text = "Upload successful!\n\nWaypoints:\n$formattedWaypoints"
-
-                    // Now call MainActivity after storing waypoints
-                    val intent = Intent(this@SecondActivity, MainActivity::class.java)
-                    startActivity(intent)
-                    finish() // Close SecondActivity if desired
-
+                    uploadButton.text = "Select Another Image"
+                    uploadButton.isEnabled = true
+                    uploadButton.setOnClickListener { checkPermissionAndPickImage() }
                 } else {
                     resultText.text = "Error: ${response.code()} - ${response.message()}"
                     uploadButton.text = "Retry Upload"
