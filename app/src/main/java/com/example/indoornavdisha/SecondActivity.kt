@@ -66,7 +66,7 @@ interface ApiService {
                 .build()
 
             return Retrofit.Builder()
-                .baseUrl("http://192.168.1.215:5000/")
+                .baseUrl("http://192.168.62.191:5000/")
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build()
